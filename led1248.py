@@ -116,33 +116,32 @@ async def blop():
         await client.write_gatt_char(char, cmd, response=False)
         await asyncio.sleep(0.1)
 
-    def split_payload(payload):
-        LEN = 128
-        return [payload[start : start + LEN] for start in range(0, len(payload), LEN)]
-
-    def build_packet(payload_size, packet_id, packet):
-        contents = b"".join(
-            [
-                # 'tis not ours to wonder why
-                b"\x00",
-                # total payload size
-                payload_size.to_bytes(2, "big"),
-                # packet id
-                packet_id.to_bytes(2, "big"),
-                # packet size
-                len(packet).to_bytes(1, "big"),
-                packet,
-            ]
-        )
-        return contents + checksum(contents)
-
-    def checksum(packet):
-        c = 0
-        for x in packet:
-            c ^= x
-        return c.to_bytes(1, "big")
-
     async def send_stream(client, char, packet_type, payload):
+        def split_payload(payload):
+            LEN = 128
+            return [payload[start : start + LEN] for start in range(0, len(payload), LEN)]
+
+        def build_packet(payload_size, packet_id, packet):
+            contents = b"".join(
+                [
+                    # 'tis not ours to wonder why
+                    b"\x00",
+                    # total payload size
+                    payload_size.to_bytes(2, "big"),
+                    # packet id
+                    packet_id.to_bytes(2, "big"),
+                    # packet size
+                    len(packet).to_bytes(1, "big"),
+                    packet,
+                ]
+            )
+            def checksum(packet):
+                c = 0
+                for x in packet:
+                    c ^= x
+                return c.to_bytes(1, "big")
+            return contents + checksum(contents)
+
         for i, data in enumerate(split_payload(payload)):
             await send(
                 client,
@@ -169,7 +168,7 @@ async def blop():
                 client,
                 char,
                 PACKET_TYPE.TEXT,
-                text_payload("Hello World", "pink", 16),
+                text_payload("Hello World", "red", 16),
             )
             await asyncio.sleep(1)
         except Exception as ex:
