@@ -3,9 +3,9 @@ from bleak import BleakScanner, BleakClient, BleakGATTCharacteristic
 import logging
 
 class BLEConnection:
-    def __init__(self, uuid):
+    def __init__(self, uuid, rx_callback):
         self.uuid = uuid
-        self.rx_callback = None
+        self.rx_callback = rx_callback
 
     async def __aenter__(self):
         self.device = await BleakScanner.find_device_by_address(self.uuid)
@@ -38,9 +38,6 @@ class BLEConnection:
         # TODO: Lift actual packet sending out to a separate task so this
         # doesn't block useful stuff
         await asyncio.sleep(0.1)
-
-    def set_rx_callback(self, rx_callback):
-        self.rx_callback = rx_callback
 
     def handle_rx(self, BleakGATTCharacteristic, data: bytearray):
         assert self.rx_callback != None, "No Rx Callback"

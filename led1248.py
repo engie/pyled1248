@@ -123,9 +123,8 @@ async def scroll(connection, dir):
 if __name__ == "__main__":
     UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
     async def spam_display():
-        async with BLEConnection(UUID) as connection:
+        async with BLEConnection(UUID, handle_rx) as connection:
             try:
-                connection.set_rx_callback(handle_rx)
                 await scroll(connection, SCROLL.SCROLLLEFT)
                 await send_stream(
                     connection,
