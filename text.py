@@ -16,7 +16,6 @@ def render_text(txt, color, height):
 
 def text_payload(txt, color, height):
     im = render_text(txt, color, height)
-    print(im.getbbox())
 
     def band_payload(band_data, width, height):
         # band data is line after line
@@ -29,7 +28,7 @@ def text_payload(txt, color, height):
         for x in range(width):
             col = 0
             for y in range(height):
-                col = (col << 1) | int(1 if band_data[y * width + x] & 0x80 else 0)
+                col = (col << 1) | int(1 if band_data[y * width + x] > 100 else 0)
 
             out.append(col >> 8)
             out.append(col & 0xFF)
@@ -61,4 +60,7 @@ def text_payload(txt, color, height):
     ])
 
 if __name__ == "__main__":
-    payload = text_payload("Hello", "red", 16)
+    im = render_text("Hello World", "green", 16)
+    im = im.getchannel(1)
+    im = im.point(lambda x: 255 if x > 5 else 0)
+    im.show()
