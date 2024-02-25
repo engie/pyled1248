@@ -173,14 +173,14 @@ class BLEConnection:
 
     async def __aenter__(self):
         self.device = await BleakScanner.find_device_by_address(self.uuid)
-        if self.device is None:
-            logger.error(f"UUID {self.uuid} not found")
-            # TODO: Is this legit?
-            sys.exit(1)
+        assert self.device != None, f"UUID {self.uuid} not found"
+
         self.client = BleakClient(
             self.device, disconnected_callback=self.handle_disconnect
         )
+        # Apparantly this is how you nest ContextManagers. A bit weird.
         await self.client.__aenter__()
+
         logger.info(f"Bleak connected to {self.device.address}")
         assert len(self.client.services.services) == 1, "Found not one service"
         service = list(self.client.services.services.values())[0]
@@ -190,7 +190,7 @@ class BLEConnection:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        logger.info("Tearing down")
+        # Apparantly this is how you nest ContextManagers. A bit weird.
         await self.client.__aexit__(exc_type, exc_value, traceback)
 
     async def send_packet(self, cmd):
