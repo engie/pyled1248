@@ -8,7 +8,6 @@ from image import text_payload
 logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 class SCROLL(Enum):
     SCROLLSTATIC = 1
     SCROLLLEFT = 2
@@ -19,8 +18,9 @@ class SCROLL(Enum):
     SCROLLPICTURE = 7
     SCROLLLASER = 8
 
-class GRAPHIC_TYPE(Enum):
+class PACKET_TYPE(Enum):
     TEXT = 2
+    MODE = 6
 
 # Used manually during device exploration
 # TODO: Should this be usable? What API?
@@ -92,8 +92,12 @@ async def blop():
         except Exception as ex:
             logger.error(f"Failed to decode received data {data.hex()}", exc_info=ex)
 
-    async def send(client, char, bytes):
-        payload = len(bytes).to_bytes(2, "big") + bytes
+    async def send(client, char, packet_type, bytes):
+        payload = b"".join([
+            (len(bytes)+1).to_bytes(2, "big"),
+            packet_type.value.to_bytes(1, "big"),
+            bytes,
+        ])
         padded = pad(payload)
         cmd = b"\x01" + padded + b"\x03"
         logging.debug(f"Sending: {cmd.hex()}")
@@ -125,7 +129,7 @@ async def blop():
             c ^= x
         return c.to_bytes(1, "big")
 
-    async def send_stream(client, char, stream_type, payload):
+    async def send_stream(client, char, packet_type, payload):
         packets = [
             build_packet(len(payload), i, data)
             for i, data in enumerate(split_payload(payload))
@@ -134,9 +138,9 @@ async def blop():
             await send(
                 client,
                 char,
+                packet_type,
                 b"".join(
                     [
-                        stream_type.value.to_bytes(1, "big"),
                         packet,
                         # Remember the checksum
                         checksum(packet),
@@ -144,29 +148,24 @@ async def blop():
                 ),
             )
 
-    async with BleakClient(device, disconnected_callback=handle_disconnect) as client:
-        logger.info("Bleak connected")
-        assert len(client.services.services) == 1, "Found not one service"
-        service = list(client.services.services.values())[0]
-        assert len(service.characteristics) == 1, "Found not one characteristic"
-        char = service.characteristics[0]
-        logging.info("Got Char")
+    async def scroll(dir):
+        await send(client, char, PACKET_TYPE.MODE, dir.value.to_bytes(1, "big"))
 
+    async with BleakClient(device, disconnected_callback=handle_disconnect) as client:
         try:
+            logger.info(f"Bleak connected to {device.address}")
+            assert len(client.services.services) == 1, "Found not one service"
+            service = list(client.services.services.values())[0]
+            assert len(service.characteristics) == 1, "Found not one characteristic"
+            char = service.characteristics[0]
+
             await client.start_notify(char, handle_rx)
 
-            async def scroll(dir):
-                await send(client, char, b"\x06" + dir.value.to_bytes(1, "big"))
-
             await scroll(SCROLL.SCROLLLEFT)
-            await send_stream(client, char, GRAPHIC_TYPE.TEXT, text_payload("Hello World", "blue", 16))
+            await send_stream(client, char, PACKET_TYPE.TEXT, text_payload("Hello World", "green", 16))
             await asyncio.sleep(1)
-
-            logging.info("Done")
         except Exception as ex:
-            print(ex)
-            raise ex
-
+            logger.error("Error in BT sending coroutine: ", exc_info=ex)
 
 if __name__ == "__main__":
     # asyncio.run(search())
