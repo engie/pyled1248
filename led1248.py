@@ -96,19 +96,18 @@ async def blop():
         except Exception as ex:
             logger.error(f"Failed to decode received data {data.hex()}", exc_info=ex)
 
-    async def send(client, char, packet_type, bytes):
-        payload = b"".join(
+    async def send(client, char, packet_type, packet):
+        wrapped = b"".join(
             [
-                (len(bytes) + 1).to_bytes(2, "big"),
+                (len(packet) + 1).to_bytes(2, "big"),
                 packet_type.value.to_bytes(1, "big"),
-                bytes,
+                packet,
             ]
         )
-        padded = pad(payload)
         cmd = b"".join(
             [
                 b"\x01",
-                padded,
+                pad(wrapped),
                 b"\x03",
             ]
         )
@@ -168,7 +167,7 @@ async def blop():
                 client,
                 char,
                 PACKET_TYPE.TEXT,
-                text_payload("Hello World", "red", 16),
+                text_payload("Hello World", "blue", 16),
             )
             await asyncio.sleep(1)
         except Exception as ex:
