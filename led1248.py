@@ -8,6 +8,7 @@ from image import text_payload
 logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class SCROLL(Enum):
     SCROLLSTATIC = 1
     SCROLLLEFT = 2
@@ -18,9 +19,11 @@ class SCROLL(Enum):
     SCROLLPICTURE = 7
     SCROLLLASER = 8
 
+
 class PACKET_TYPE(Enum):
     TEXT = 2
     MODE = 6
+
 
 # Used manually during device exploration
 # TODO: Should this be usable? What API?
@@ -35,6 +38,7 @@ async def search():
         logger.info("-" * len(str(d)))
         logger.info(a)
 
+
 async def blop():
     UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
     device = await BleakScanner.find_device_by_address(UUID)
@@ -48,7 +52,7 @@ async def blop():
         # cancelling all tasks effectively ends the program
         for task in asyncio.all_tasks():
             task.cancel()
-    
+
     def pad(payload):
         padded = bytearray()
         for b in payload:
@@ -58,13 +62,13 @@ async def blop():
             else:
                 padded.append(b)
         return padded
-    
+
     def unpad(data):
         payload = bytearray()
         i = 0
         while i < len(data):
             if data[i] == 0x02:
-                payload.append(data[i+1] - 4)
+                payload.append(data[i + 1] - 4)
                 i += 2
             else:
                 payload.append(data[i])
@@ -93,17 +97,21 @@ async def blop():
             logger.error(f"Failed to decode received data {data.hex()}", exc_info=ex)
 
     async def send(client, char, packet_type, bytes):
-        payload = b"".join([
-            (len(bytes)+1).to_bytes(2, "big"),
-            packet_type.value.to_bytes(1, "big"),
-            bytes,
-        ])
+        payload = b"".join(
+            [
+                (len(bytes) + 1).to_bytes(2, "big"),
+                packet_type.value.to_bytes(1, "big"),
+                bytes,
+            ]
+        )
         padded = pad(payload)
-        cmd = b"".join([
-            b"\x01",
-            padded,
-            b"\x03",
-        ])
+        cmd = b"".join(
+            [
+                b"\x01",
+                padded,
+                b"\x03",
+            ]
+        )
         logging.debug(f"Sending: {cmd.hex()}")
         await client.write_gatt_char(char, cmd, response=False)
         await asyncio.sleep(0.1)
@@ -135,16 +143,12 @@ async def blop():
         return c.to_bytes(1, "big")
 
     async def send_stream(client, char, packet_type, payload):
-        packets = [
-            build_packet(len(payload), i, data)
-            for i, data in enumerate(split_payload(payload))
-        ]
-        for packet in packets:
+        for i, data in enumerate(split_payload(payload)):
             await send(
                 client,
                 char,
                 packet_type,
-                packet,
+                build_packet(len(payload), i, data),
             )
 
     async def scroll(dir):
@@ -161,10 +165,16 @@ async def blop():
             await client.start_notify(char, handle_rx)
 
             await scroll(SCROLL.SCROLLLEFT)
-            await send_stream(client, char, PACKET_TYPE.TEXT, text_payload("Hello World", "orange", 16))
+            await send_stream(
+                client,
+                char,
+                PACKET_TYPE.TEXT,
+                text_payload("Hello World", "pink", 16),
+            )
             await asyncio.sleep(1)
         except Exception as ex:
             logger.error("Error in BT sending coroutine: ", exc_info=ex)
+
 
 if __name__ == "__main__":
     # asyncio.run(search())
