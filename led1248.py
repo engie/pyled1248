@@ -3,7 +3,7 @@ import sys
 from enum import Enum
 from bleak import BleakScanner, BleakClient, BleakGATTCharacteristic
 import logging
-from text import text_payload
+from image import text_payload
 
 logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,12 +22,11 @@ class SCROLL(Enum):
 class GRAPHIC_TYPE(Enum):
     TEXT = 2
 
-
+# Used manually during device exploration
+# TODO: Should this be usable? What API?
 async def search():
     logger.info("scanning for 5 seconds, please wait...")
-
     devices = await BleakScanner.discover(return_adv=True, cb=dict(use_bdaddr=False))
-
     for k, v in devices.items():
         d, a = v
         logger.info()
@@ -35,7 +34,6 @@ async def search():
         logger.info(d)
         logger.info("-" * len(str(d)))
         logger.info(a)
-
 
 async def blop():
     UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
@@ -161,7 +159,7 @@ async def blop():
                 await send(client, char, b"\x06" + dir.value.to_bytes(1, "big"))
 
             await scroll(SCROLL.SCROLLLEFT)
-            await send_stream(client, char, GRAPHIC_TYPE.TEXT, text_payload("Hello World", "purple", 16))
+            await send_stream(client, char, GRAPHIC_TYPE.TEXT, text_payload("Hello World", "blue", 16))
             await asyncio.sleep(1)
 
             logging.info("Done")
