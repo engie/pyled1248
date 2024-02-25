@@ -99,7 +99,11 @@ async def blop():
             bytes,
         ])
         padded = pad(payload)
-        cmd = b"\x01" + padded + b"\x03"
+        cmd = b"".join([
+            b"\x01",
+            padded,
+            b"\x03",
+        ])
         logging.debug(f"Sending: {cmd.hex()}")
         await client.write_gatt_char(char, cmd, response=False)
         await asyncio.sleep(0.1)
@@ -109,7 +113,7 @@ async def blop():
         return [payload[start : start + LEN] for start in range(0, len(payload), LEN)]
 
     def build_packet(payload_size, packet_id, packet):
-        return b"".join(
+        contents = b"".join(
             [
                 # 'tis not ours to wonder why
                 b"\x00",
@@ -122,6 +126,7 @@ async def blop():
                 packet,
             ]
         )
+        return contents + checksum(contents)
 
     def checksum(packet):
         c = 0
@@ -139,13 +144,7 @@ async def blop():
                 client,
                 char,
                 packet_type,
-                b"".join(
-                    [
-                        packet,
-                        # Remember the checksum
-                        checksum(packet),
-                    ]
-                ),
+                packet,
             )
 
     async def scroll(dir):
@@ -162,7 +161,7 @@ async def blop():
             await client.start_notify(char, handle_rx)
 
             await scroll(SCROLL.SCROLLLEFT)
-            await send_stream(client, char, PACKET_TYPE.TEXT, text_payload("Hello World", "green", 16))
+            await send_stream(client, char, PACKET_TYPE.TEXT, text_payload("Hello World", "orange", 16))
             await asyncio.sleep(1)
         except Exception as ex:
             logger.error("Error in BT sending coroutine: ", exc_info=ex)
