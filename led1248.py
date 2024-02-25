@@ -43,7 +43,6 @@ async def search():
 
 UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
 
-
 async def blop():
     def pad(payload):
         padded = bytearray()
@@ -194,7 +193,13 @@ class BLEConnection:
         await self.client.__aexit__(exc_type, exc_value, traceback)
 
     async def send_packet(self, cmd):
+        logging.info("Sending packet")
         await self.client.write_gatt_char(self.char, cmd, response=False)
+        # Removing this doesn't work at all. Could wait for ACKs,
+        # but they seem to take 100-200ms to return from eyeballing logs.
+        # This is probably alright for now.
+        # TODO: Lift actual packet sending out to a separate task so this
+        # doesn't block useful stuff
         await asyncio.sleep(0.1)
 
     def set_rx_callback(self, rx_callback):
