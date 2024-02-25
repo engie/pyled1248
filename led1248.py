@@ -66,7 +66,7 @@ async def blop():
         logging.info(f"Sending: {hexy(cmd)}")
         await client.write_gatt_char(char, cmd, response=False)
         logging.info("Sent. Sleeping")
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
     
     def split_payload(payload):
         LEN = 128
@@ -120,7 +120,7 @@ async def blop():
             async def scroll(dir):
                 await send(client, char, b"\x06" + dir.value.to_bytes(1, "big"))
             # await scroll(SCROLL.SCROLLLEFT)
-            await send_stream(client, char, text_payload("Hello World", "blue", 16))
+            await send_stream(client, char, text_payload("Hello World", "red", 16))
             await asyncio.sleep(1)
 
             logging.info("Done")
