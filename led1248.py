@@ -5,7 +5,9 @@ from bleak import BleakScanner, BleakClient, BleakGATTCharacteristic
 import logging
 from image import text_payload
 
-logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 
@@ -39,20 +41,10 @@ async def search():
         logger.info(a)
 
 
+UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
+
+
 async def blop():
-    UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
-    device = await BleakScanner.find_device_by_address(UUID)
-
-    if device is None:
-        logger.error(f"UUID {UUID} not found")
-        sys.exit(1)
-
-    def handle_disconnect(_: BleakClient):
-        logger.info("Device was disconnected, goodbye.")
-        # cancelling all tasks effectively ends the program
-        for task in asyncio.all_tasks():
-            task.cancel()
-
     def pad(payload):
         padded = bytearray()
         for b in payload:
@@ -75,7 +67,7 @@ async def blop():
                 i += 1
         return payload
 
-    def handle_rx(_: BleakGATTCharacteristic, data: bytearray):
+    def handle_rx(data: bytearray):
         try:
             assert data[0] == 0x01, "Invalid start byte"
             assert data[-1] == 0x03, "Invalid end byte"
@@ -83,7 +75,7 @@ async def blop():
             length = int.from_bytes(packet[:2], "big")
             payload = packet[2:]
             assert len(payload) == length, "Receive size mismatch"
-            logger.debug("Received:" + payload.hex())
+            logger.info("Received:" + payload.hex())
             # No idea what this is
             type = payload[0]
             # Apparantly LEDs can have an ID?
@@ -96,7 +88,7 @@ async def blop():
         except Exception as ex:
             logger.error(f"Failed to decode received data {data.hex()}", exc_info=ex)
 
-    async def send(client, char, packet_type, packet):
+    async def send(connection, packet_type, packet):
         wrapped = b"".join(
             [
                 (len(packet) + 1).to_bytes(2, "big"),
@@ -112,13 +104,14 @@ async def blop():
             ]
         )
         logging.debug(f"Sending: {cmd.hex()}")
-        await client.write_gatt_char(char, cmd, response=False)
-        await asyncio.sleep(0.1)
+        await connection.send_packet(cmd)
 
-    async def send_stream(client, char, packet_type, payload):
+    async def send_stream(connection, packet_type, payload):
         def split_payload(payload):
             LEN = 128
-            return [payload[start : start + LEN] for start in range(0, len(payload), LEN)]
+            return [
+                payload[start : start + LEN] for start in range(0, len(payload), LEN)
+            ]
 
         def build_packet(payload_size, packet_id, packet):
             contents = b"".join(
@@ -134,44 +127,88 @@ async def blop():
                     packet,
                 ]
             )
+
             def checksum(packet):
                 c = 0
                 for x in packet:
                     c ^= x
                 return c.to_bytes(1, "big")
+
             return contents + checksum(contents)
 
         for i, data in enumerate(split_payload(payload)):
             await send(
-                client,
-                char,
+                connection,
                 packet_type,
                 build_packet(len(payload), i, data),
             )
 
-    async def scroll(dir):
-        await send(client, char, PACKET_TYPE.MODE, dir.value.to_bytes(1, "big"))
+    async def scroll(connection, dir):
+        await send(connection, PACKET_TYPE.MODE, dir.value.to_bytes(1, "big"))
 
-    async with BleakClient(device, disconnected_callback=handle_disconnect) as client:
+    async with BLEConnection(UUID) as connection:
         try:
-            logger.info(f"Bleak connected to {device.address}")
-            assert len(client.services.services) == 1, "Found not one service"
-            service = list(client.services.services.values())[0]
-            assert len(service.characteristics) == 1, "Found not one characteristic"
-            char = service.characteristics[0]
-
-            await client.start_notify(char, handle_rx)
-
-            await scroll(SCROLL.SCROLLLEFT)
+            connection.set_rx_callback(handle_rx)
+            await scroll(connection, SCROLL.SCROLLLEFT)
             await send_stream(
-                client,
-                char,
+                connection,
                 PACKET_TYPE.TEXT,
-                text_payload("Hello World", "blue", 16),
+                text_payload("Hello World", "green", 16),
             )
-            await asyncio.sleep(1)
         except Exception as ex:
             logger.error("Error in BT sending coroutine: ", exc_info=ex)
+
+from typing import Protocol
+class Connection(Protocol):
+    def set_rx_callback(self, rx_callback) -> None:
+        pass
+
+    def send_packet(self, cmd) -> None:
+        pass
+
+class BLEConnection:
+    def __init__(self, uuid):
+        self.uuid = uuid
+        self.rx_callback = None
+
+    async def __aenter__(self):
+        self.device = await BleakScanner.find_device_by_address(self.uuid)
+        if self.device is None:
+            logger.error(f"UUID {self.uuid} not found")
+            # TODO: Is this legit?
+            sys.exit(1)
+        self.client = BleakClient(
+            self.device, disconnected_callback=self.handle_disconnect
+        )
+        await self.client.__aenter__()
+        logger.info(f"Bleak connected to {self.device.address}")
+        assert len(self.client.services.services) == 1, "Found not one service"
+        service = list(self.client.services.services.values())[0]
+        assert len(service.characteristics) == 1, "Found not one characteristic"
+        self.char = service.characteristics[0]
+        await self.client.start_notify(self.char, self.handle_rx)
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        logger.info("Tearing down")
+        await self.client.__aexit__(exc_type, exc_value, traceback)
+
+    async def send_packet(self, cmd):
+        await self.client.write_gatt_char(self.char, cmd, response=False)
+        await asyncio.sleep(0.1)
+
+    def set_rx_callback(self, rx_callback):
+        self.rx_callback = rx_callback
+
+    def handle_rx(self, BleakGATTCharacteristic, data: bytearray):
+        assert self.rx_callback != None, "No Rx Callback"
+        self.rx_callback(data)
+
+    def handle_disconnect(self, _: BleakClient):
+        logger.info("BLE Device was disconnected, goodbye.")
+        # cancelling all tasks effectively ends the program
+        for task in asyncio.all_tasks():
+            task.cancel()
 
 
 if __name__ == "__main__":
