@@ -30,7 +30,7 @@ class BLEConnection:
         await self.client.__aexit__(exc_type, exc_value, traceback)
 
     async def send_packet(self, cmd):
-        logging.info("Sending packet")
+        logging.debug("Sending: " + cmd.hex())
         await self.client.write_gatt_char(self.char, cmd, response=False)
         # Removing this doesn't work at all. Could wait for ACKs,
         # but they seem to take 100-200ms to return from eyeballing logs.

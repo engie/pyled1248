@@ -49,7 +49,7 @@ def handle_rx(data: bytearray):
         length = int.from_bytes(packet[:2], "big")
         payload = packet[2:]
         assert len(payload) == length, "Receive size mismatch"
-        logging.info("Received:" + payload.hex())
+        logging.debug("Received:" + payload.hex())
         # No idea what this is
         type = payload[0]
         # Apparantly LEDs can have an ID?
@@ -120,25 +120,25 @@ async def send_stream(connection, packet_type, payload):
 async def scroll(connection, dir):
     await send(connection, PACKET_TYPE.MODE, dir.value.to_bytes(1, "big"))
 
-UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
-async def blop():
-    async with BLEConnection(UUID) as connection:
-        try:
-            connection.set_rx_callback(handle_rx)
-            await scroll(connection, SCROLL.SCROLLLEFT)
-            await send_stream(
-                connection,
-                PACKET_TYPE.TEXT,
-                text_payload("Hello World", "green", 16),
-            )
-        except Exception as ex:
-            logging.error("Error in BT sending coroutine: ", exc_info=ex)
-
 if __name__ == "__main__":
+    UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
+    async def spam_display():
+        async with BLEConnection(UUID) as connection:
+            try:
+                connection.set_rx_callback(handle_rx)
+                await scroll(connection, SCROLL.SCROLLLEFT)
+                await send_stream(
+                    connection,
+                    PACKET_TYPE.TEXT,
+                    text_payload("Hello World", "red", 16),
+                )
+            except Exception as ex:
+                logging.error("Error in BT sending coroutine: ", exc_info=ex)
+
     logging.basicConfig(
         format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
     )
     try:
-        asyncio.run(blop())
+        asyncio.run(spam_display())
     except asyncio.CancelledError:
         pass
