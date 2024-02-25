@@ -74,10 +74,25 @@ async def blop():
         return payload
 
     def handle_rx(_: BleakGATTCharacteristic, data: bytearray):
-        assert data[0] == 0x01, "Invalid start byte"
-        assert data[-1] == 0x03, "Invalid end byte"
-        payload = unpad(data[1:-1])
-        logger.info("received:" + payload.hex())
+        try:
+            assert data[0] == 0x01, "Invalid start byte"
+            assert data[-1] == 0x03, "Invalid end byte"
+            packet = unpad(data[1:-1])
+            length = int.from_bytes(packet[:2], "big")
+            payload = packet[2:]
+            assert len(payload) == length, "Receive size mismatch"
+            logger.debug("Received:" + payload.hex())
+            # No idea what this is
+            type = payload[0]
+            # Apparantly LEDs can have an ID?
+            id = payload[1]
+            # Lines up with packet_id in send stream
+            packet_id = int.from_bytes(payload[2:4], "big")
+            # Should be 0. If not, uhhh, bad?
+            status = payload[4]
+            assert status == 0x00, "LED reported error"
+        except Exception as ex:
+            logger.error(f"Failed to decode received data {data.hex()}", exc_info=ex)
 
     async def send(client, char, bytes):
         payload = len(bytes).to_bytes(2, "big") + bytes
@@ -146,7 +161,7 @@ async def blop():
                 await send(client, char, b"\x06" + dir.value.to_bytes(1, "big"))
 
             await scroll(SCROLL.SCROLLLEFT)
-            await send_stream(client, char, GRAPHIC_TYPE.TEXT, text_payload("Hello World", "yellow", 16))
+            await send_stream(client, char, GRAPHIC_TYPE.TEXT, text_payload("Hello World", "purple", 16))
             await asyncio.sleep(1)
 
             logging.info("Done")
