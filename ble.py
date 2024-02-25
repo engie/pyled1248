@@ -59,8 +59,16 @@ async def search():
     devices = await BleakScanner.discover(return_adv=True, cb=dict(use_bdaddr=False))
     for k, v in devices.items():
         d, a = v
-        logging.info()
         logging.info(k)
         logging.info(d)
         logging.info("-" * len(str(d)))
         logging.info(a)
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
+    )
+    try:
+        asyncio.run(search())
+    except asyncio.CancelledError:
+        pass

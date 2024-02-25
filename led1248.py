@@ -5,9 +5,6 @@ import logging
 from image import text_payload
 from ble import BLEConnection
 
-logging.basicConfig(
-    format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
-)
 
 class SCROLL(Enum):
     SCROLLSTATIC = 1
@@ -147,7 +144,9 @@ class Connection(Protocol):
         pass
 
 if __name__ == "__main__":
-    # asyncio.run(search())
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
+    )
     try:
         asyncio.run(blop())
     except asyncio.CancelledError:
