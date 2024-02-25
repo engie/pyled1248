@@ -5,7 +5,6 @@ import logging
 from image import text_payload
 from ble import BLEConnection
 
-
 class SCROLL(Enum):
     SCROLLSTATIC = 1
     SCROLLLEFT = 2
@@ -134,14 +133,6 @@ async def blop():
             )
         except Exception as ex:
             logging.error("Error in BT sending coroutine: ", exc_info=ex)
-
-from typing import Protocol
-class Connection(Protocol):
-    def set_rx_callback(self, rx_callback) -> None:
-        pass
-
-    def send_packet(self, cmd) -> None:
-        pass
 
 if __name__ == "__main__":
     logging.basicConfig(
