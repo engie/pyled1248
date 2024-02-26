@@ -122,22 +122,22 @@ async def scroll(connection, dir):
 
 if __name__ == "__main__":
     UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
-    async def spam_display():
+    async def spam_display(text):
         async with BLEConnection(UUID, handle_rx) as connection:
             try:
                 await scroll(connection, SCROLL.SCROLLLEFT)
                 await send_stream(
                     connection,
                     PACKET_TYPE.TEXT,
-                    text_payload("Hello World", "red", 16),
+                    text_payload(text, "red", 16),
                 )
             except Exception as ex:
                 logging.error("Error in BT sending coroutine: ", exc_info=ex)
 
     logging.basicConfig(
-        format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
+        format="%(asctime)s %(levelname)s: %(message)s", level=logging.DEBUG
     )
     try:
-        asyncio.run(spam_display())
+        asyncio.run(spam_display(sys.argv[1]))
     except asyncio.CancelledError:
         pass

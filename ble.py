@@ -30,7 +30,6 @@ class BLEConnection:
         await self.client.__aexit__(exc_type, exc_value, traceback)
 
     async def send_packet(self, cmd):
-        logging.debug("Sending: " + cmd.hex())
         await self.client.write_gatt_char(self.char, cmd, response=False)
         # Removing this doesn't work at all. Could wait for ACKs,
         # but they seem to take 100-200ms to return from eyeballing logs.
@@ -45,9 +44,6 @@ class BLEConnection:
 
     def handle_disconnect(self, _: BleakClient):
         logging.info("BLE Device was disconnected, goodbye.")
-        # cancelling all tasks effectively ends the program
-        for task in asyncio.all_tasks():
-            task.cancel()
 
 # Used manually during device exploration
 # TODO: Should this be usable? What API?
