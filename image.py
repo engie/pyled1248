@@ -11,7 +11,7 @@ def band_payload(band_data, width, height):
     for x in range(width):
         col = 0
         for y in range(height):
-            col = (col << 1) | int(1 if band_data[y * width + x] > 100 else 0)
+            col = (col << 1) | int(1 if band_data[y * width + x] > 75 else 0)
 
         out.append(col >> 8)
         out.append(col & 0xFF)

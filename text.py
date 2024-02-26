@@ -1,18 +1,17 @@
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 
 def render_text(text, color, height):
-    img = Image.new("RGB", (4096, 512))
+    img = Image.new("RGB", (400, 16))
     ImageDraw.Draw(img).text(
         (0, 0),
         text,
         ImageColor.getrgb(color),
-        font=ImageFont.truetype("Keyboard", 72),
+        font = ImageFont.load_path("spleen-8x16.pil"),
     )
-    # Scale to a constant height, so calculate the final width
     x, y, full_width, full_height = img.getbbox()
-    width = int(full_width * float(height) / full_height)
-    return img.resize((width, height), box=img.getbbox())
+    return img.crop((x, 0, full_width, 16))
 
 if __name__ == "__main__":
-    im = render_text("Hello World", "green", 16)
+    import sys
+    im = render_text(sys.argv[1], "green", 16)
     im.show()
