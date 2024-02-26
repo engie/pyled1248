@@ -2,10 +2,10 @@ import asyncio
 import sys
 from enum import Enum
 import logging
-from image import text_payload
-from ble import BLEConnection
+from .image import text_payload
+from .ble import BLEConnection
 
-class SCROLL(Enum):
+class SCROLL_TYPE(Enum):
     SCROLLSTATIC = 1
     SCROLLLEFT = 2
     SCROLLRIGHT = 3
@@ -120,16 +120,23 @@ async def send_stream(connection, packet_type, payload):
 async def scroll(connection, dir):
     await send(connection, PACKET_TYPE.MODE, dir.value.to_bytes(1, "big"))
 
+async def send_text(connection, text, color):
+    await send_stream(
+        connection,
+        PACKET_TYPE.TEXT,
+        text_payload(text, color, 16),
+    )
+
 if __name__ == "__main__":
     UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
     async def spam_display(text):
         async with BLEConnection(UUID, handle_rx) as connection:
             try:
-                await scroll(connection, SCROLL.SCROLLLEFT)
-                await send_stream(
+                await scroll(connection, SCROLL_TYPE.SCROLLLEFT)
+                await send_text(
                     connection,
-                    PACKET_TYPE.TEXT,
-                    text_payload(text, "red", 16),
+                    text,
+                    "red",
                 )
             except Exception as ex:
                 logging.error("Error in BT sending coroutine: ", exc_info=ex)

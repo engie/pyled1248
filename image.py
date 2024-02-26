@@ -1,4 +1,4 @@
-from text import render_text
+from .text import render_text
 
 def band_payload(band_data, width, height):
     # band data is line after line
