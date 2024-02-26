@@ -17,7 +17,7 @@ class BLEConnection:
         # Apparantly this is how you nest ContextManagers. A bit weird.
         await self.client.__aenter__()
 
-        logging.info(f"Bleak connected to {self.device.address}")
+        logging.debug(f"Bleak connected to {self.device.address}")
         assert len(self.client.services.services) == 1, "Found not one service"
         service = list(self.client.services.services.values())[0]
         assert len(service.characteristics) == 1, "Found not one characteristic"
@@ -43,7 +43,7 @@ class BLEConnection:
         self.rx_callback(data)
 
     def handle_disconnect(self, _: BleakClient):
-        logging.info("BLE Device was disconnected, goodbye.")
+        logging.debug("BLE Device was disconnected, goodbye.")
 
 # Used manually during device exploration
 # TODO: Should this be usable? What API?
