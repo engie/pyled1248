@@ -128,9 +128,8 @@ async def send_text(connection, text, color):
     )
 
 if __name__ == "__main__":
-    UUID = "2BD223FA-4899-1F14-EC86-ED061D67B468"
     async def spam_display(text):
-        async with BLEConnection(UUID, handle_rx) as connection:
+        async with BLEConnection(handle_rx) as connection:
             try:
                 await scroll(connection, SCROLL_TYPE.SCROLLLEFT)
                 await send_text(

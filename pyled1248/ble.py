@@ -2,26 +2,29 @@ import asyncio
 from bleak import BleakScanner, BleakClient, BleakGATTCharacteristic
 import logging
 
+SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb"
+CHARACTERISTIC_UUID = "0000fff1-0000-1000-8000-00805f9b34fb"
+
 class BLEConnection:
-    def __init__(self, uuid, rx_callback):
-        self.uuid = uuid
+    def __init__(self, rx_callback):
         self.rx_callback = rx_callback
 
     async def __aenter__(self):
-        self.device = await BleakScanner.find_device_by_address(self.uuid)
-        assert self.device != None, f"UUID {self.uuid} not found"
+        def led_test(device, advertisement):
+            return SERVICE_UUID in advertisement.service_uuids
+        self.device = await BleakScanner.find_device_by_filter(led_test)
+        assert self.device != None, f"SERVICE UUID {SERVICE_UUID} not found"
 
         self.client = BleakClient(
-            self.device, disconnected_callback=self.handle_disconnect
+            self.device,
+            services = [SERVICE_UUID],
+            disconnected_callback=self.handle_disconnect
         )
         # Apparantly this is how you nest ContextManagers. A bit weird.
         await self.client.__aenter__()
 
-        logging.debug(f"Bleak connected to {self.device.address}")
-        assert len(self.client.services.services) == 1, "Found not one service"
-        service = list(self.client.services.services.values())[0]
-        assert len(service.characteristics) == 1, "Found not one characteristic"
-        self.char = service.characteristics[0]
+        self.char = self.client.services.get_characteristic(CHARACTERISTIC_UUID)
+        assert self.char != None, f"Could not find characteristic {CHARACTERISTIC_UUID}"
         await self.client.start_notify(self.char, self.handle_rx)
         return self
 
@@ -49,7 +52,7 @@ class BLEConnection:
 # TODO: Should this be usable? What API?
 async def search():
     logging.info("scanning for 5 seconds, please wait...")
-    devices = await BleakScanner.discover(return_adv=True, cb=dict(use_bdaddr=False))
+    devices = await BleakScanner.discover(return_adv=True, cb=dict(use_bdaddr=True))
     for k, v in devices.items():
         d, a = v
         logging.info(k)
