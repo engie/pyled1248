@@ -1,4 +1,4 @@
-from .led1248 import send_text, handle_rx, scroll, SCROLL_TYPE
+from .led1248 import send_text, handle_rx, scroll, heartbeat, SCROLL_TYPE
 from .ble import BLEConnection
 
 __all__ = [
@@ -9,6 +9,7 @@ __all__ = [
     # Commands for the display
     "send_text",
     "scroll",
+    "heartbeat",
 
     # Process responses
     "handle_rx",

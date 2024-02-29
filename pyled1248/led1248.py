@@ -18,6 +18,7 @@ class SCROLL_TYPE(Enum):
 class PACKET_TYPE(Enum):
     TEXT = 2
     MODE = 6
+    SPEED = 7
 
 def pad(payload):
     padded = bytearray()
@@ -119,6 +120,12 @@ async def send_stream(connection, packet_type, payload):
 
 async def scroll(connection, dir):
     await send(connection, PACKET_TYPE.MODE, dir.value.to_bytes(1, "big"))
+
+async def heartbeat(connection):
+    """
+    This seems to be a NOP
+    """
+    await send(connection, PACKET_TYPE.SPEED, b"\x0")
 
 async def send_text(connection, text, color):
     await send_stream(
