@@ -20,6 +20,8 @@ class PACKET_TYPE(Enum):
     MODE = 6
     SPEED = 7
 
+BEST_SCROLL_SPEED = 0xE0 #Out of 255, super not linear!
+
 def pad(payload):
     padded = bytearray()
     for b in payload:
@@ -123,9 +125,9 @@ async def scroll(connection, dir):
 
 async def heartbeat(connection):
     """
-    This seems to be a NOP
+    This doesn't interfere with the ongoing display
     """
-    await send(connection, PACKET_TYPE.SPEED, b"\x00")
+    await send(connection, PACKET_TYPE.SPEED, BEST_SCROLL_SPEED.to_bytes(1, "big"))
 
 async def send_text(connection, text, color):
     await send_stream(
