@@ -125,7 +125,7 @@ async def heartbeat(connection):
     """
     This seems to be a NOP
     """
-    await send(connection, PACKET_TYPE.SPEED, b"\x0")
+    await send(connection, PACKET_TYPE.SPEED, b"\x00")
 
 async def send_text(connection, text, color):
     await send_stream(
