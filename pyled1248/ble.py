@@ -39,7 +39,7 @@ class BLEConnection:
         # This is probably alright for now.
         # TODO: Lift actual packet sending out to a separate task so this
         # doesn't block useful stuff
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.2)
 
     def handle_rx(self, BleakGATTCharacteristic, data: bytearray):
         assert self.rx_callback != None, "No Rx Callback"
